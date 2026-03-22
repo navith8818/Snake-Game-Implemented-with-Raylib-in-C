@@ -11,6 +11,8 @@
 #define MOVE_DELAY 0.25f
 #define MAX_SAVED_STEPS 5
 
+Color button_orange = { 239, 55, 25, 255 };
+
 typedef enum {
     FOOD_APPLE,
     FOOD_EGG,
@@ -763,9 +765,9 @@ FoodType RandomSpecialFood()
 FoodType RandomAbility()
 {
     int random = GetRandomValue(0, 99);
-    if(random >= 100){
+    if(random >= 70){
         return ABILITY_2x;
-    }else if(random >= 0){
+    }else if(random >= 40){
         return ABILITY_REVIVE;
     }else{
         return ABILITY_SLOW;
@@ -951,7 +953,7 @@ void UpdateHealth(Stack *health, LinkedList *snake, FoodType type, bool *gameOve
                 if(IsRevive){
                     revive(&snake, movements, dirCol, dirRow);
                     push(health, 18, 558);
-                    *gameState = PLAYING;
+                    *gameState = PAUSED;
                 }else{
                     strcpy(text1, "I thought it was");
                     strcpy(text2, "a spicy grape!");
@@ -968,7 +970,7 @@ void UpdateHealth(Stack *health, LinkedList *snake, FoodType type, bool *gameOve
     }
 }
 
-void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* AbilityQueue, bool *grow, bool *gameOver, char *text1, char *text2, SnakeStack* movements, int* dirCol, int* dirRow, GameState *gameState, scoreNode *thisRound)
+void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* AbilityQueue, bool *grow, bool *gameOver, char *text1, char *text2, SnakeStack* movements, int* dirCol, int* dirRow, GameState *gameState, scoreNode *thisRound, bool *scoreDouble)
 {
     // --- Apple eaten ---
     if (IsEating(snake, active->apple))
@@ -976,7 +978,12 @@ void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* Abi
         free(active->apple);
         
         *grow = true;
-        thisRound->score += 100;
+        if(*scoreDouble){
+            thisRound->score += 200;
+        }
+        else{
+            thisRound->score += 100;
+        }
 
         if (active->special != NULL)
         {
@@ -1156,14 +1163,20 @@ void DrawAbilityQueue(Queue *AbilityQueue,Texture2D ability_2x, Texture2D abilit
 
 
 
-void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, int* dirCol, int* dirRow, float *reviveTimer, float reviveDuration, bool *reviveUsed, GameState *gameState) {
+void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, int* dirCol, int* dirRow, float *Timer, bool *counter, GameState *gameState, bool *scoreDouble) {
     if (!AbilityQueue->front) return;
 
     switch (AbilityQueue->front->type) {
         case ABILITY_REVIVE:
-            *reviveUsed = true;
+            *counter = true;
             *gameState = REVIVE_COUNTDOWN;
-            *reviveTimer = reviveDuration;
+            *Timer = 5.0f;
+            break;
+
+        case ABILITY_2x:
+            *counter = true;
+            *scoreDouble = true;
+            *Timer = 10.0f;
             break;
         default:
             break;
@@ -1177,7 +1190,7 @@ void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, 
     }
     
 }
-void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, float *reviveTimer, float reviveDuration, bool *reviveUsed, GameState *gameState, int dirColSave, int dirRowSave)
+void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, float *Timer, bool *counter, GameState *gameState, int dirColSave, int dirRowSave, bool *scoreDouble)
 {
     
     if((IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W) ) && *dirY != 1)
@@ -1204,7 +1217,7 @@ void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, 
         *dirY = 0;
     }
     if (IsKeyPressed(KEY_E)) {
-        useAbility(AbilityQueue, snake, movements, dirX, dirY, reviveTimer, reviveDuration, reviveUsed, gameState);
+        useAbility(AbilityQueue, snake, movements, dirX, dirY, Timer, counter, gameState, scoreDouble);
     }
     if (IsKeyPressed(KEY_P) || IsKeyPressed(KEY_ESCAPE)) {
         if (*gameState == PLAYING){
@@ -1223,16 +1236,24 @@ void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, 
     }
 
 }
-void UpdateCountdown(float dt, float *reviveTimer, GameState *gameState){
+void UpdateCountdown(float dt, float *Timer, GameState *gameState, bool *scoreDouble){
 
-    if (*gameState == REVIVE_COUNTDOWN)
-    {
-        *reviveTimer -= dt;
+    if (*gameState == REVIVE_COUNTDOWN){
+        *Timer -= dt;
 
-        if (*reviveTimer <= 0.0f)
+        if (*Timer <= 0.0f)
         {
             // Time expired → real game over
             *gameState = GAME_OVER;
+        }
+    }
+    if(*scoreDouble){
+        *Timer -= dt;
+
+        if (*Timer <= 0.0f)
+        {
+            // Time expired → real game over
+            *scoreDouble = false;
         }
     }
 }
@@ -1273,7 +1294,7 @@ void MoveSnake(LinkedList* snake, SnakeStack* movements, int *dirCol,int *dirRow
             bool IsRevive = ReviveScreen(text1, text2);
             if(IsRevive){
                 revive(&snake, movements, dirCol, dirRow);
-                *gameState = PLAYING;
+                *gameState = PAUSED;
             }else{
                 strcpy(text1, "I think I tripped");
                 strcpy(text2, "on my own tail...");
@@ -1316,7 +1337,7 @@ void DrawScores(ScoreList* list)
 {
     if (!list || !list->head)
     {
-        DrawText("No Scores Yet", 300, 200, 20, WHITE);
+        DrawText("No Scores Yet", 300, 200, 40, WHITE);
         return;
     }
 
@@ -1335,7 +1356,7 @@ void DrawScores(ScoreList* list)
         // Example: "1. John - 120"
         sprintf(text, "%d. %d", rank, temp->score);
 
-        DrawText(text, startX, startY, 25, WHITE);
+        DrawText(text, startX, startY, 40, WHITE);
 
         startY += lineHeight;
         temp = temp->next;
@@ -1347,7 +1368,7 @@ void DrawHighestScores(int scoreArray[], int size)
 {
     if (size <= 0)
     {
-        DrawText("No Scores Yet", 300, 200, 20, WHITE);
+        DrawText("No Scores Yet", 250, 200, 40, WHITE);
         return;
     }
 
@@ -1362,7 +1383,7 @@ void DrawHighestScores(int scoreArray[], int size)
     for(i = 0; i < size; i++){
         char text[100];
         sprintf(text, "%d. %d", rank, scoreArray[i]);
-        DrawText(text, startX, startY, 25, WHITE);
+        DrawText(text, startX, startY, 40, WHITE);
         startY += lineHeight;
         rank++;
     }
@@ -1478,8 +1499,9 @@ GameScreen MenuScreen(Texture2D background, Texture2D logo, Texture2D button, Te
 }
 
 
-GameScreen ReplayScreen(char *text1, char *text2){
+GameScreen ReplayScreen(char *text1, char *text2, ScoreList* ScoreList){
     Texture2D Background = LoadTexture("Graphics/gameover bg.png");
+    Font fontRegular = LoadFontEx("resources/FFFFORWA.ttf", 128, 0, 0);
 
     Texture2D Quit_button = LoadTexture("Graphics/quit.png");
     Sound lose = LoadSound("resources/lose.mp3");
@@ -1500,6 +1522,7 @@ GameScreen ReplayScreen(char *text1, char *text2){
     float hoverY = baseY - 5;
 
     bool soundPlayed = false;
+    char text[100];
     
     while (!WindowShouldClose()){
 
@@ -1564,6 +1587,11 @@ GameScreen ReplayScreen(char *text1, char *text2){
         DrawTexturePro(dialog_box, source, dest, origin, 0.0f, WHITE);
         DrawText(text1, 390, 80, 40, BLACK);
         DrawText(text2, 390, 130, 40, BLACK);
+        sprintf(text, "%d", ScoreList->head->score);
+        //DrawText(text, 600, 450, 50, RED);
+        //DrawText("SCORE : ", 390, 450, 50, WHITE);
+        DrawTextEx(fontRegular, "SCORE : ", (Vector2){ 390, 460 }, 55, 2, button_orange);
+        DrawTextEx(fontRegular, text, (Vector2){ 610, 460 }, 55, 2, WHITE);
         
 
         EndDrawing();
@@ -1593,6 +1621,8 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
     Texture2D healthBar  = LoadTexture("Graphics/health bar.png");
     Texture2D heart  = LoadTexture("Graphics/heart.png");
 
+    Font fontRegular = LoadFontEx("resources/FFFFORWA.ttf", 128, 0, 0);
+
     Music gameplayMusic = LoadMusicStream("resources/MilkyWay.mp3");
     SetMusicVolume(gameplayMusic, 0.5f);  
     PlayMusicStream(gameplayMusic);
@@ -1606,15 +1636,15 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
 
     bool grow = false;
     bool gameOver = false;
+    bool scoreDouble = false;
 
     int score = 0;
     insertScore(ScoreList,score);
 
     GameState gameState = PLAYING;
 
-    float reviveTimer = 0.0f;
-    float reviveDuration = 5.0f;
-    bool reviveUsed = false;
+    float Timer = 0.0f;
+    bool counter = false;
 
 
     LinkedList* snake = InitSnake();
@@ -1628,6 +1658,7 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
 
     int dirColSave = dirCol;
     int dirRowSave = dirRow;
+    char text[100];
 
     while (!WindowShouldClose()){
 
@@ -1635,8 +1666,8 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
 
         float dt = GetFrameTime();
 
-        HandleInput(&dirCol, &dirRow, AbilityQueue, &snake, movements, &reviveTimer, reviveDuration, &reviveUsed, &gameState, dirColSave, dirRowSave);
-        UpdateCountdown(dt, &reviveTimer, &gameState);
+        HandleInput(&dirCol, &dirRow, AbilityQueue, &snake, movements, &Timer, &counter, &gameState, dirColSave, dirRowSave, &scoreDouble);
+        UpdateCountdown(dt, &Timer, &gameState, &scoreDouble);
 
         if(dirCol != 0 || dirRow != 0){
             dirColSave = dirCol;
@@ -1649,12 +1680,15 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
                 
                 MoveSnake(snake, movements, &dirCol, &dirRow,&gameOver, &grow, text1, text2, &gameState);
                 moveTimer -= MOVE_DELAY;
-                saveMovements(snake, movements, dirCol, dirRow);
+
+                if (!gameOver && (dirCol != 0 || dirRow != 0)) {
+                    saveMovements(snake, movements, dirCol, dirRow);
+                }
             }
             float alpha = moveTimer / MOVE_DELAY;
 
             UpdateSmoothMovement(snake, alpha);
-             UpdateFood(&activeFood, snake, health, AbilityQueue, &grow, &gameOver, text1, text2,movements, &dirCol, &dirRow, &gameState, ScoreList->head);
+             UpdateFood(&activeFood, snake, health, AbilityQueue, &grow, &gameOver, text1, text2,movements, &dirCol, &dirRow, &gameState, ScoreList->head, &scoreDouble);
         }
 
 
@@ -1669,7 +1703,7 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
             UnloadTexture(bomb);
             StopMusicStream(gameplayMusic);
             UnloadMusicStream(gameplayMusic);
-            return ReplayScreen(text1,text2);
+            return ReplayScreen(text1,text2, ScoreList);
         }
 
         Vector2 mouse = GetMousePosition();
@@ -1712,6 +1746,11 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
         DrawTexture(healthBar, 10, 550, WHITE);
         DrawHealth(health,heart);
         DrawAbilityQueue(AbilityQueue,ability_2x, ability_slow, ability_revive);
+        sprintf(text, "%d", ScoreList->head->score);
+        //DrawText(text, 700, 560, 35, WHITE);
+        //DrawText("SCORE : ", 550, 560, 35, RED);
+        DrawTextEx(fontRegular, "SCORE : ", (Vector2){ 550, 560 }, 35, 2, button_orange);
+        DrawTextEx(fontRegular, text, (Vector2){ 700, 560 }, 35, 2, WHITE);
 
         if (gameState == PAUSED) {
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), 
