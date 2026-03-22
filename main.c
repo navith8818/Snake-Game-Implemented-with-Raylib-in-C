@@ -8,7 +8,6 @@
 #define CELL_SIZE 35
 #define GRID_START_X 130
 #define GRID_START_Y 30
-#define MOVE_DELAY 0.25f
 #define MAX_SAVED_STEPS 5
 
 Color button_orange = { 239, 55, 25, 255 };
@@ -19,7 +18,6 @@ typedef enum {
     FOOD_BOMB,
     ABILITY_2x,
     ABILITY_REVIVE,
-    ABILITY_LOW_SPEED,
     ABILITY_SLOW,
     FOOD_NONE
 } FoodType;
@@ -1052,7 +1050,7 @@ void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* Abi
                 temp = temp->next;
             }
             if(!(i >5)){
-                enqueue(AbilityQueue, QueuePlacement, 0,type); ;
+                enqueue(AbilityQueue, 0, QueuePlacement,type); 
             } 
 
         }   
@@ -1139,8 +1137,8 @@ void DrawAbilityQueue(Queue *AbilityQueue,Texture2D ability_2x, Texture2D abilit
     int y;
     while (temp)
     {
-        x = 160 + temp->col * CELL_SIZE;
-        y = 550 + temp->row * CELL_SIZE;
+        x = 10 + temp->col * 68;
+        y = 200 + temp->row * 68;
         switch (temp->type)
         {
         case ABILITY_2x:
@@ -1163,20 +1161,26 @@ void DrawAbilityQueue(Queue *AbilityQueue,Texture2D ability_2x, Texture2D abilit
 
 
 
-void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, int* dirCol, int* dirRow, float *Timer, bool *counter, GameState *gameState, bool *scoreDouble) {
+void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, int* dirCol, int* dirRow, float *reviveTimer, float *scoreDoubleTimer, bool *counter, GameState *gameState, bool *scoreDouble, float *MoveDelay, float *slowTimer) {
     if (!AbilityQueue->front) return;
 
     switch (AbilityQueue->front->type) {
         case ABILITY_REVIVE:
             *counter = true;
             *gameState = REVIVE_COUNTDOWN;
-            *Timer = 5.0f;
+            *reviveTimer = 5.0f;
             break;
 
         case ABILITY_2x:
             *counter = true;
             *scoreDouble = true;
-            *Timer = 10.0f;
+            *scoreDoubleTimer = 10.0f;
+            break;
+
+        case ABILITY_SLOW:
+            *counter = true;
+            *MoveDelay = 0.25f;
+            *slowTimer = 10.0f;
             break;
         default:
             break;
@@ -1185,12 +1189,12 @@ void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, 
     QueueNode* temp = AbilityQueue->front;
     while (temp)
     {
-        temp->col++;
+        temp->row++;
         temp = temp->next;
     }
     
 }
-void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, float *Timer, bool *counter, GameState *gameState, int dirColSave, int dirRowSave, bool *scoreDouble)
+void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, float *reviveTimer, float *scoreDoubleTimer, bool *counter, GameState *gameState, int dirColSave, int dirRowSave, bool *scoreDouble, float *MoveDelay, float *slowTimer)
 {
     
     if((IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W) ) && *dirY != 1)
@@ -1217,7 +1221,7 @@ void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, 
         *dirY = 0;
     }
     if (IsKeyPressed(KEY_E)) {
-        useAbility(AbilityQueue, snake, movements, dirX, dirY, Timer, counter, gameState, scoreDouble);
+        useAbility(AbilityQueue, snake, movements, dirX, dirY, reviveTimer, scoreDoubleTimer, counter, gameState, scoreDouble, MoveDelay, slowTimer);
     }
     if (IsKeyPressed(KEY_P) || IsKeyPressed(KEY_ESCAPE)) {
         if (*gameState == PLAYING){
@@ -1236,24 +1240,30 @@ void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, 
     }
 
 }
-void UpdateCountdown(float dt, float *Timer, GameState *gameState, bool *scoreDouble){
+void UpdateCountdown(float dt, float *reviveTimer, float *scoreDoubleTimer, GameState *gameState, bool *scoreDouble, float *MoveDelay, float *slowTimer){
 
     if (*gameState == REVIVE_COUNTDOWN){
-        *Timer -= dt;
+        *reviveTimer -= dt;
 
-        if (*Timer <= 0.0f)
+        if (*reviveTimer <= 0.0f)
         {
-            // Time expired → real game over
             *gameState = GAME_OVER;
         }
     }
     if(*scoreDouble){
-        *Timer -= dt;
+        *scoreDoubleTimer -= dt;
 
-        if (*Timer <= 0.0f)
+        if (*scoreDoubleTimer <= 0.0f)
         {
-            // Time expired → real game over
             *scoreDouble = false;
+        }
+    }
+    if(*MoveDelay > 0.20f){
+        *slowTimer -= dt;
+
+        if (*slowTimer <= 0.0f)
+        {
+            *MoveDelay = 0.20f;
         }
     }
 }
@@ -1617,6 +1627,10 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
     Texture2D ability_2x  = LoadTexture("Graphics/ability 2x.png");
     Texture2D ability_slow  = LoadTexture("Graphics/ability slow.png");
     Texture2D ability_revive  = LoadTexture("Graphics/ability revive.png");
+    Texture2D ability_2x_B  = LoadTexture("Graphics/2x B.png");
+    Texture2D ability_slow_B  = LoadTexture("Graphics/slow B.png");
+    Texture2D ability_revive_B  = LoadTexture("Graphics/respawn B.png");
+
 
     Texture2D healthBar  = LoadTexture("Graphics/health bar.png");
     Texture2D heart  = LoadTexture("Graphics/heart.png");
@@ -1637,13 +1651,17 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
     bool grow = false;
     bool gameOver = false;
     bool scoreDouble = false;
+    float MoveDelay = 0.20f;
 
     int score = 0;
     insertScore(ScoreList,score);
 
     GameState gameState = PLAYING;
 
-    float Timer = 0.0f;
+    float reviveTimer = 0.0f;
+    float scoreDoubleTimer = 0.0f;
+    float slowTimer = 0.0f;
+
     bool counter = false;
 
 
@@ -1666,8 +1684,8 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
 
         float dt = GetFrameTime();
 
-        HandleInput(&dirCol, &dirRow, AbilityQueue, &snake, movements, &Timer, &counter, &gameState, dirColSave, dirRowSave, &scoreDouble);
-        UpdateCountdown(dt, &Timer, &gameState, &scoreDouble);
+        HandleInput(&dirCol, &dirRow, AbilityQueue, &snake, movements, &reviveTimer, &scoreDoubleTimer, &counter, &gameState, dirColSave, dirRowSave, &scoreDouble, &MoveDelay, &slowTimer);
+        UpdateCountdown(dt, &reviveTimer, &scoreDoubleTimer, &gameState, &scoreDouble, &MoveDelay, &slowTimer);
 
         if(dirCol != 0 || dirRow != 0){
             dirColSave = dirCol;
@@ -1676,16 +1694,16 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
         
         if(gameState != PAUSED){
             moveTimer += dt;
-            while(moveTimer >= MOVE_DELAY && !gameOver ){
+            while(moveTimer >= MoveDelay && !gameOver ){
                 
                 MoveSnake(snake, movements, &dirCol, &dirRow,&gameOver, &grow, text1, text2, &gameState);
-                moveTimer -= MOVE_DELAY;
+                moveTimer -= MoveDelay;
 
                 if (!gameOver && (dirCol != 0 || dirRow != 0)) {
                     saveMovements(snake, movements, dirCol, dirRow);
                 }
             }
-            float alpha = moveTimer / MOVE_DELAY;
+            float alpha = moveTimer / MoveDelay;
 
             UpdateSmoothMovement(snake, alpha);
              UpdateFood(&activeFood, snake, health, AbilityQueue, &grow, &gameOver, text1, text2,movements, &dirCol, &dirRow, &gameState, ScoreList->head, &scoreDouble);
@@ -1745,7 +1763,7 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
         DrawSnake(snake,SnakeHead,SnakeTail,SnakePart,dirCol,dirRow,dirColSave,dirRowSave);
         DrawTexture(healthBar, 10, 550, WHITE);
         DrawHealth(health,heart);
-        DrawAbilityQueue(AbilityQueue,ability_2x, ability_slow, ability_revive);
+        DrawAbilityQueue(AbilityQueue,ability_2x_B, ability_slow_B, ability_revive_B);
         sprintf(text, "%d", ScoreList->head->score);
         //DrawText(text, 700, 560, 35, WHITE);
         //DrawText("SCORE : ", 550, 560, 35, RED);
