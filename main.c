@@ -501,7 +501,7 @@ void FadeToBlack(float speed, char text[])
 
         BeginDrawing();
 
-        DrawText(text, 330, 250, 40, WHITE);
+        DrawText(text, 300, 260, 40, WHITE);
 
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){0, 0, 0, (unsigned char)(alpha * 255)});
 
@@ -802,7 +802,7 @@ void TrySpawnSpecial(ActiveFood *active, LinkedList *snake)
     // only spawn if no special is currently active
     //if (active->special != NULL) return;
 
-    if (GetRandomValue(0, 99) >= 0){
+    if (GetRandomValue(0, 99) >= 40){
         FoodType type = RandomAbility();
         active->ability = SpawnFood(snake, active, type);
     };
@@ -917,7 +917,7 @@ bool ReviveScreen(char *text1, char *text2){
     return 0;
 }
 
-void UpdateHealth(Stack *health, LinkedList *snake, FoodType type, bool *gameOver, char *text1, char *text2, SnakeStack* movements, int* dirCol, int* dirRow, GameState *gameState ){
+void UpdateHealth(Stack *health, LinkedList *snake, FoodType type, bool *gameOver, char *text1, char *text2, SnakeStack* movements, int* dirCol, int* dirRow, GameState *gameState, bool *counter){
     if (type == FOOD_EGG){
             
         StackNode *temp = health->top;
@@ -929,11 +929,11 @@ void UpdateHealth(Stack *health, LinkedList *snake, FoodType type, bool *gameOve
         switch (healthLevel){
             case 4:
                 break;
-            case 3: push(health, 102, 558);
+            case 3: push(health, 102, 563);
                 break;
-            case 2: push(health, 74, 558);
+            case 2: push(health, 74, 563);
                 break;
-            case 1: push(health, 46, 558);
+            case 1: push(health, 46, 563);
                 break;
             default:
                 break;
@@ -950,7 +950,8 @@ void UpdateHealth(Stack *health, LinkedList *snake, FoodType type, bool *gameOve
 
                 if(IsRevive){
                     revive(&snake, movements, dirCol, dirRow);
-                    push(health, 18, 558);
+                    push(health, 18, 563);
+                    *counter = false;
                     *gameState = PAUSED;
                 }else{
                     strcpy(text1, "I thought it was");
@@ -968,7 +969,7 @@ void UpdateHealth(Stack *health, LinkedList *snake, FoodType type, bool *gameOve
     }
 }
 
-void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* AbilityQueue, bool *grow, bool *gameOver, char *text1, char *text2, SnakeStack* movements, int* dirCol, int* dirRow, GameState *gameState, scoreNode *thisRound, bool *scoreDouble)
+void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* AbilityQueue, bool *grow, bool *gameOver, char *text1, char *text2, SnakeStack* movements, int* dirCol, int* dirRow, GameState *gameState, scoreNode *thisRound, bool *scoreDouble, bool *counter)
 {
     // --- Apple eaten ---
     if (IsEating(snake, active->apple))
@@ -1007,7 +1008,7 @@ void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* Abi
     if (IsEating(snake, active->special))
     {
         FoodType type = active->special->type;
-        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState);
+        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState, counter);
         free(active->special);
         active->special = NULL;
 
@@ -1015,7 +1016,7 @@ void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* Abi
     if (IsEating(snake, active->special1))
     {    
         FoodType type = active->special1->type;
-        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState);
+        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState, counter);
         free(active->special1);
         active->special1 = NULL;
 
@@ -1024,7 +1025,7 @@ void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* Abi
     {
         
         FoodType type = active->special2->type;
-        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState);
+        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState, counter);
         free(active->special2);
         active->special2 = NULL;
 
@@ -1115,10 +1116,10 @@ void DrawFood(ActiveFood *active, Texture2D appleTexture, Texture2D eggTexture, 
 }
 Stack * initHealth(Texture2D heart){
     Stack * health = initialize();
-    push(health, 18, 558);
-    push(health, 46, 558);
-    push(health, 74, 558);
-    push(health, 102, 558);
+    push(health, 18, 563);
+    push(health, 46, 563);
+    push(health, 74, 563);
+    push(health, 102, 563);
     return health;
     
 }
@@ -1221,7 +1222,11 @@ void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, 
         *dirY = 0;
     }
     if (IsKeyPressed(KEY_E)) {
-        useAbility(AbilityQueue, snake, movements, dirX, dirY, reviveTimer, scoreDoubleTimer, counter, gameState, scoreDouble, MoveDelay, slowTimer);
+        if(!*counter){
+            useAbility(AbilityQueue, snake, movements, dirX, dirY, reviveTimer, scoreDoubleTimer, counter, gameState, scoreDouble, MoveDelay, slowTimer);
+            *counter = true;
+
+        }
     }
     if (IsKeyPressed(KEY_P) || IsKeyPressed(KEY_ESCAPE)) {
         if (*gameState == PLAYING){
@@ -1240,7 +1245,7 @@ void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, 
     }
 
 }
-void UpdateCountdown(float dt, float *reviveTimer, float *scoreDoubleTimer, GameState *gameState, bool *scoreDouble, float *MoveDelay, float *slowTimer){
+void UpdateCountdown(float dt, float *reviveTimer, float *scoreDoubleTimer, GameState *gameState, bool *scoreDouble, float *MoveDelay, float *slowTimer, bool *counter){
 
     if (*gameState == REVIVE_COUNTDOWN){
         *reviveTimer -= dt;
@@ -1248,6 +1253,7 @@ void UpdateCountdown(float dt, float *reviveTimer, float *scoreDoubleTimer, Game
         if (*reviveTimer <= 0.0f)
         {
             *gameState = GAME_OVER;
+            *counter = false;
         }
     }
     if(*scoreDouble){
@@ -1256,6 +1262,7 @@ void UpdateCountdown(float dt, float *reviveTimer, float *scoreDoubleTimer, Game
         if (*scoreDoubleTimer <= 0.0f)
         {
             *scoreDouble = false;
+            *counter = false;
         }
     }
     if(*MoveDelay > 0.20f){
@@ -1264,11 +1271,12 @@ void UpdateCountdown(float dt, float *reviveTimer, float *scoreDoubleTimer, Game
         if (*slowTimer <= 0.0f)
         {
             *MoveDelay = 0.20f;
+            *counter = false;
         }
     }
 }
 
-void MoveSnake(LinkedList* snake, SnakeStack* movements, int *dirCol,int *dirRow, bool *gameOver, bool *grow, char *text1, char *text2, GameState *gameState )
+void MoveSnake(LinkedList* snake, SnakeStack* movements, int *dirCol,int *dirRow, bool *gameOver, bool *grow, char *text1, char *text2, GameState *gameState, bool *counter)
 {
     if (!snake || !snake->head) return;
 
@@ -1283,6 +1291,7 @@ void MoveSnake(LinkedList* snake, SnakeStack* movements, int *dirCol,int *dirRow
             bool IsRevive = ReviveScreen(text1, text2);
             if(IsRevive){
                 revive(&snake, movements, dirCol, dirRow);
+                *counter = false;
                 *gameState = PAUSED;
             }else{
                 strcpy(text1, "That wall came");
@@ -1304,6 +1313,7 @@ void MoveSnake(LinkedList* snake, SnakeStack* movements, int *dirCol,int *dirRow
             bool IsRevive = ReviveScreen(text1, text2);
             if(IsRevive){
                 revive(&snake, movements, dirCol, dirRow);
+                *counter = false;
                 *gameState = PAUSED;
             }else{
                 strcpy(text1, "I think I tripped");
@@ -1347,7 +1357,7 @@ void DrawScores(ScoreList* list)
 {
     if (!list || !list->head)
     {
-        DrawText("No Scores Yet", 300, 200, 40, WHITE);
+        DrawText("No Scores Yet", 250, 200, 40, WHITE);
         return;
     }
 
@@ -1355,7 +1365,7 @@ void DrawScores(ScoreList* list)
 
     int startX = 250;
     int startY = 150;
-    int lineHeight = 40;
+    int lineHeight = 50;
 
     int rank = 1;
 
@@ -1366,7 +1376,7 @@ void DrawScores(ScoreList* list)
         // Example: "1. John - 120"
         sprintf(text, "%d. %d", rank, temp->score);
 
-        DrawText(text, startX, startY, 40, WHITE);
+        DrawText(text, startX, startY, 50, WHITE);
 
         startY += lineHeight;
         temp = temp->next;
@@ -1385,7 +1395,7 @@ void DrawHighestScores(int scoreArray[], int size)
 
     int startX = 250;
     int startY = 150;
-    int lineHeight = 40;
+    int lineHeight = 50;
 
     int rank = 1;
     int i;
@@ -1393,7 +1403,7 @@ void DrawHighestScores(int scoreArray[], int size)
     for(i = 0; i < size; i++){
         char text[100];
         sprintf(text, "%d. %d", rank, scoreArray[i]);
-        DrawText(text, startX, startY, 40, WHITE);
+        DrawText(text, startX, startY, 50, WHITE);
         startY += lineHeight;
         rank++;
     }
@@ -1664,6 +1674,9 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
 
     bool counter = false;
 
+    int displayTime = 0;
+    
+
 
     LinkedList* snake = InitSnake();
     Stack * health = initHealth(heart);
@@ -1677,15 +1690,18 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
     int dirColSave = dirCol;
     int dirRowSave = dirRow;
     char text[100];
+    char abilityText[100];
+    char DisplayTimeText[100];
 
     while (!WindowShouldClose()){
 
         UpdateMusicStream(gameplayMusic);
 
         float dt = GetFrameTime();
+        bool showTimer = false;
 
         HandleInput(&dirCol, &dirRow, AbilityQueue, &snake, movements, &reviveTimer, &scoreDoubleTimer, &counter, &gameState, dirColSave, dirRowSave, &scoreDouble, &MoveDelay, &slowTimer);
-        UpdateCountdown(dt, &reviveTimer, &scoreDoubleTimer, &gameState, &scoreDouble, &MoveDelay, &slowTimer);
+        UpdateCountdown(dt, &reviveTimer, &scoreDoubleTimer, &gameState, &scoreDouble, &MoveDelay, &slowTimer, &counter);
 
         if(dirCol != 0 || dirRow != 0){
             dirColSave = dirCol;
@@ -1696,7 +1712,7 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
             moveTimer += dt;
             while(moveTimer >= MoveDelay && !gameOver ){
                 
-                MoveSnake(snake, movements, &dirCol, &dirRow,&gameOver, &grow, text1, text2, &gameState);
+                MoveSnake(snake, movements, &dirCol, &dirRow,&gameOver, &grow, text1, text2, &gameState, &counter);
                 moveTimer -= MoveDelay;
 
                 if (!gameOver && (dirCol != 0 || dirRow != 0)) {
@@ -1706,9 +1722,25 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
             float alpha = moveTimer / MoveDelay;
 
             UpdateSmoothMovement(snake, alpha);
-             UpdateFood(&activeFood, snake, health, AbilityQueue, &grow, &gameOver, text1, text2,movements, &dirCol, &dirRow, &gameState, ScoreList->head, &scoreDouble);
+            UpdateFood(&activeFood, snake, health, AbilityQueue, &grow, &gameOver, text1, text2,movements, &dirCol, &dirRow, &gameState, ScoreList->head, &scoreDouble, &counter);
         }
 
+        if (gameState == REVIVE_COUNTDOWN) {
+            displayTime = (int)reviveTimer;
+            showTimer = true;
+            strcpy(abilityText, "Can Revive :");
+
+        } else if (scoreDouble) {
+            displayTime = (int)scoreDoubleTimer;
+            showTimer = true;
+            strcpy(abilityText, "Score Bonus :");
+
+        } else if (MoveDelay > 0.24f) {
+            displayTime = (int)slowTimer;
+            showTimer = true;
+            strcpy(abilityText, "Move Slow :");
+        }
+        sprintf(DisplayTimeText, "%d", displayTime);
 
         if(gameOver){
             WaitTime(1.3f);
@@ -1761,7 +1793,7 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
 
         DrawFood(&activeFood, apple, egg, bomb, ability_2x, ability_slow, ability_revive);
         DrawSnake(snake,SnakeHead,SnakeTail,SnakePart,dirCol,dirRow,dirColSave,dirRowSave);
-        DrawTexture(healthBar, 10, 550, WHITE);
+        DrawTexture(healthBar, 10, 555, WHITE);
         DrawHealth(health,heart);
         DrawAbilityQueue(AbilityQueue,ability_2x_B, ability_slow_B, ability_revive_B);
         sprintf(text, "%d", ScoreList->head->score);
@@ -1769,6 +1801,13 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
         //DrawText("SCORE : ", 550, 560, 35, RED);
         DrawTextEx(fontRegular, "SCORE : ", (Vector2){ 550, 560 }, 35, 2, button_orange);
         DrawTextEx(fontRegular, text, (Vector2){ 700, 560 }, 35, 2, WHITE);
+        
+        
+        if(showTimer){
+            DrawTextEx(fontRegular, abilityText, (Vector2){ 200, 560 }, 35, 2, DARKBLUE);
+            DrawTextEx(fontRegular, DisplayTimeText, (Vector2){ 430, 560 }, 35, 2, WHITE);
+
+        }
 
         if (gameState == PAUSED) {
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), 
@@ -2056,7 +2095,7 @@ GameScreen SelectMap(Texture2D Map1, Texture2D Map2, Texture2D Map3, Texture2D M
 
         if(CheckCollisionPointRec(mouse, SelectRec) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
             SetMouseCursor(MOUSE_CURSOR_DEFAULT);
-            FadeToBlack(2.5f,"Loading...");
+            FadeToBlack(2.5f,"Ready...");
             StopMusicStream(bgMusic);
             *Selected = currentMap->MapName;
             return GAME;
@@ -2107,8 +2146,15 @@ GameScreen SelectMap(Texture2D Map1, Texture2D Map2, Texture2D Map3, Texture2D M
 int main() {
 
     InitWindow(800, 600, "Snake POP");
+
+    BeginDrawing();
+    ClearBackground(BLACK);
+    FadeToBlack(2.5f,"Loading...");
+    EndDrawing();
+
     SetTargetFPS(60);
     SetExitKey(KEY_NULL);
+
 
     // Load textures
     Texture2D background = LoadTexture("Graphics/background 2.png");
