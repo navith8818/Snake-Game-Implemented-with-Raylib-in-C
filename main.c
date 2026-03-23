@@ -176,7 +176,7 @@ void insertNode(DoublyLinkedList* list,Texture2D MapName){
     if(list->head == NULL){
         list->head = newNode;
         list->tail = newNode;
-        newNode->next = newNode;  // Circular: points to itself
+        newNode->next = newNode; 
         newNode->prev = newNode;
     }
     else{
@@ -271,7 +271,7 @@ void enqueue(Queue *queue, int x, int y, FoodType type) {
     }
 }
 
-// Dequeue: Remove element from the front of the queue
+// Remove element from the front of the queue
 int dequeue(Queue *queue) {
     if (isQueueEmpty(queue)) {
         return -1;
@@ -665,13 +665,13 @@ void UpdateSmoothMovement(LinkedList* snake,float alpha)
 
         if(temp == snake->head)
         {
-            // Head moves towards its current grid position
+
             targetX = GRID_START_X + temp->col * CELL_SIZE;
             targetY = GRID_START_Y + temp->row * CELL_SIZE;
         }
         else
         {
-            // Body moves towards the previous node’s previous position
+
             targetX = prev->prevX;
             targetY = prev->prevY;
         }
@@ -699,7 +699,6 @@ LinkedList* CopySnake(LinkedList* snake) {
         temp = temp->next;
     }
 
-    // Insert tail to head to preserve order
     for (int i = count - 1; i >= 0; i--) {
         insertAtHead(copy, cols[i], rows[i]);
     }
@@ -734,7 +733,7 @@ void revive(LinkedList** snake, SnakeStack* movements, int* dirCol, int* dirRow)
     while (movements->top) {
         if (target) FreeSnake(target);
 
-        // Save direction from this snapshot before popping
+        // Save direction before popping
         savedDirCol = movements->top->dirCol;
         savedDirRow = movements->top->dirRow;
 
@@ -743,7 +742,6 @@ void revive(LinkedList** snake, SnakeStack* movements, int* dirCol, int* dirRow)
 
     if (!target) return;
 
-    //FreeSnake(*snake);
     *snake  = CopySnake(target);
     *dirCol = savedDirCol;  
     *dirRow = savedDirRow;
@@ -799,8 +797,6 @@ bool IsEating(LinkedList *snake, QueueNode* food)
 
 void TrySpawnSpecial(ActiveFood *active, LinkedList *snake)
 {
-    // only spawn if no special is currently active
-    //if (active->special != NULL) return;
 
     if (GetRandomValue(0, 99) >= 40){
         FoodType type = RandomAbility();
@@ -854,7 +850,6 @@ bool ReviveScreen(char *text1, char *text2){
             PlaySound(lose);
             soundPlayed = true;
         }
-        
 
         UpdateMusicStream(bgmusic);
 
@@ -1002,16 +997,17 @@ void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* Abi
            active->special = NULL;
         }
 
-        // Spawn next apple immediately
+        // Spawn next apple
         active->apple = SpawnFood(snake, active, FOOD_APPLE);
 
-        // Maybe queue a special food
         free(active->special);
         active->special = NULL;
         free(active->special1);
         active->special1 = NULL;
         free(active->special2);
         active->special2 = NULL;
+        free(active->ability);
+        active->ability = NULL;
         TrySpawnSpecial(active, snake);
         
     }
@@ -1172,8 +1168,6 @@ void DrawAbilityQueue(Queue *AbilityQueue,Texture2D ability_2x, Texture2D abilit
     }
 }
 
-
-
 void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, int* dirCol, int* dirRow, float *reviveTimer, float *scoreDoubleTimer, bool *counter, GameState *gameState, bool *scoreDouble, float *MoveDelay, float *slowTimer) {
     if (!AbilityQueue->front) return;
 
@@ -1204,9 +1198,9 @@ void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, 
     {
         temp->row++;
         temp = temp->next;
-    }
-    
+    }   
 }
+
 void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, float *reviveTimer, float *scoreDoubleTimer, bool *counter, GameState *gameState, int dirColSave, int dirRowSave, bool *scoreDouble, float *MoveDelay, float *slowTimer)
 {
     
@@ -1347,14 +1341,12 @@ void MoveSnake(LinkedList* snake, SnakeStack* movements, int *dirCol,int *dirRow
         temp = temp->next;
     }
 
-    // STEP 2: Save old head grid position before inserting new head
     float oldHeadX = snake->head->prevX;
     float oldHeadY = snake->head->prevY;
 
-    // STEP 3: Insert new head
+    //Insert new head
     insertAtHead(snake, newCol, newRow);
 
-    // STEP 4: New head animates FROM where old head was
     snake->head->prevX = oldHeadX;
     snake->head->prevY = oldHeadY;
 
@@ -1384,10 +1376,7 @@ void DrawScores(ScoreList* list)
     while (temp)
     {
         char text[100];
-
-        // Example: "1. John - 120"
         sprintf(text, "%d. %d", rank, temp->score);
-
         DrawText(text, startX, startY, 50, WHITE);
 
         startY += lineHeight;
@@ -1403,7 +1392,6 @@ void DrawHighestScores(int scoreArray[], int size)
         DrawText("No Scores Yet", 250, 200, 40, WHITE);
         return;
     }
-
 
     int startX = 250;
     int startY = 150;
@@ -1526,7 +1514,6 @@ GameScreen MenuScreen(Texture2D background, Texture2D logo, Texture2D button, Te
         EndDrawing();
     }
 
-
     return EXIT_GAME;
 }
 
@@ -1566,8 +1553,7 @@ GameScreen ReplayScreen(char *text1, char *text2, ScoreList* ScoreList){
         {
             PlaySound(lose);
             soundPlayed = true;
-        }
-        
+        }   
 
         UpdateMusicStream(bgmusic);
 
@@ -1633,8 +1619,7 @@ GameScreen ReplayScreen(char *text1, char *text2, ScoreList* ScoreList){
         DrawText(text2, 390, 130, 40, BLACK);
         sprintf(text, "%d", ScoreList->head->score);
         DrawTextEx(fontRegular, "SCORE : ", (Vector2){ 400, 480 }, 55, 2, button_orange);
-        DrawTextEx(fontRegular, text, (Vector2){ 620, 480 }, 55, 2, WHITE);
-        
+        DrawTextEx(fontRegular, text, (Vector2){ 620, 480 }, 55, 2, WHITE);        
 
         EndDrawing();
     }
@@ -1703,8 +1688,7 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
 
     bool counter = false;
 
-    int displayTime = 0;
-    
+    int displayTime = 0; 
 
     LinkedList* snake = InitSnake();
     Stack * health = initHealth(heart);
@@ -1782,6 +1766,14 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
             UnloadTexture(apple);
             UnloadTexture(egg);
             UnloadTexture(bomb);
+            UnloadTexture(ability_2x);
+            UnloadTexture(ability_slow);
+            UnloadTexture(ability_revive);
+            UnloadTexture(ability_2x_B);
+            UnloadTexture(ability_slow_B);
+            UnloadTexture(ability_revive_B);
+            UnloadTexture(healthBar);
+            UnloadTexture(heart);
             StopMusicStream(gameplayMusic);
             UnloadMusicStream(gameplayMusic);
             return ReplayScreen(text1,text2, ScoreList);
@@ -1810,6 +1802,14 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
             UnloadTexture(apple);
             UnloadTexture(egg);
             UnloadTexture(bomb);
+            UnloadTexture(ability_2x);
+            UnloadTexture(ability_slow);
+            UnloadTexture(ability_revive);
+            UnloadTexture(ability_2x_B);
+            UnloadTexture(ability_slow_B);
+            UnloadTexture(ability_revive_B);
+            UnloadTexture(healthBar);
+            UnloadTexture(heart);
             StopMusicStream(gameplayMusic);
             UnloadMusicStream(gameplayMusic);
 
@@ -1853,15 +1853,15 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
         DrawText("TUTORIAL",    250, 50, 60, WHITE);
    
         DrawTextEx(robotoRegular, "Press Esc to resume", (Vector2){ 250, 170 }, 35, 2, LIGHTGRAY);
-        DrawTextEx(robotoRegular, "Press [E] -> ACTIVATE ABILITY", (Vector2){ 230, 250 }, 25, 2, GOLD);
-        DrawTextEx(robotoRegular, "BOMB ->  - HEALTH (Watch Out!)", (Vector2){ 230, 300 }, 25, 2, GOLD);
-        DrawTextEx(robotoRegular, "EGG ->  + HEALTH (Stay Strong!)", (Vector2){ 230, 350 }, 25, 2, GOLD);
+        DrawTextEx(robotoRegular, "Press [E] -> ACTIVATE ABILITY", (Vector2){ 230, 350 }, 25, 2, GOLD);
+        DrawTextEx(robotoRegular, "BOMB ->  - HEALTH (Watch Out!)", (Vector2){ 230, 250 }, 25, 2, GOLD);
+        DrawTextEx(robotoRegular, "EGG ->  + HEALTH (Stay Strong!)", (Vector2){ 230, 300 }, 25, 2, GOLD);
         DrawTextEx(robotoRegular, "DOUBLE SCORE", (Vector2){ 330, 410 }, 25, 2, GOLD);
         DrawTextEx(robotoRegular, "SLOW SLITHER", (Vector2){ 330, 470 }, 25, 2, GOLD);
         DrawTextEx(robotoRegular, "REVIVE SOUL", (Vector2){ 330, 530 }, 25, 2, GOLD);
 
-        DrawTexture(bomb, 170, 290, WHITE);
-        DrawTexture(egg, 170, 340, WHITE);
+        DrawTexture(bomb, 170, 240, WHITE);
+        DrawTexture(egg, 170, 290, WHITE);
         DrawTexture(ability_2x_B, 240, 390, WHITE);
         DrawTexture(ability_slow_B, 240, 450, WHITE);
         DrawTexture(ability_revive_B, 240, 510, WHITE);
@@ -1874,6 +1874,20 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
     }
     
     free(snake);
+    UnloadTexture(SnakePart);
+    UnloadTexture(SnakeHead);
+    UnloadTexture(SnakeTail);
+    UnloadTexture(apple);
+    UnloadTexture(egg);
+    UnloadTexture(bomb);
+    UnloadTexture(ability_2x);
+    UnloadTexture(ability_slow);
+    UnloadTexture(ability_revive);
+    UnloadTexture(ability_2x_B);
+    UnloadTexture(ability_slow_B);
+    UnloadTexture(ability_revive_B);
+    UnloadTexture(healthBar);
+    UnloadTexture(heart);
     StopMusicStream(gameplayMusic);
     UnloadMusicStream(gameplayMusic);
     return EXIT_GAME;
@@ -1939,7 +1953,6 @@ GameScreen HighestScore(ScoreList* ScoreList, Texture2D Back_button, Music bgMus
     convertToArray(ScoreList, scoreArray);
 
     insertionSort(scoreArray, count);
-
 
     while (!WindowShouldClose()){
 
@@ -2173,8 +2186,6 @@ GameScreen SelectMap(Texture2D Map1, Texture2D Map2, Texture2D Map3, Texture2D M
             NextMap = currentMap->next;
         }
 
-
-
         BeginDrawing();
         ClearBackground(DARKGRAY);
         DrawTexture(map_background, 0, 0, WHITE);
@@ -2211,7 +2222,6 @@ int main() {
 
     SetTargetFPS(60);
     SetExitKey(KEY_NULL);
-
 
     // Load textures
     Texture2D background = LoadTexture("Graphics/background 2.png");
