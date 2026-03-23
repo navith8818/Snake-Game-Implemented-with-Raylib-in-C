@@ -26,6 +26,7 @@ typedef enum {
     PLAYING,
     REVIVE_COUNTDOWN,
     PAUSED,
+    TUTORIAL,
     GAME_OVER
 } GameState;
 
@@ -66,7 +67,6 @@ LinkedList* initList(){
 
     return list;
 }
-
 
 // create node
 Node* createNode(int col, int row){
@@ -1192,7 +1192,7 @@ void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, 
 
         case ABILITY_SLOW:
             *counter = true;
-            *MoveDelay = 0.25f;
+            *MoveDelay = 0.30f;
             *slowTimer = 10.0f;
             break;
         default:
@@ -1277,7 +1277,7 @@ void UpdateCountdown(float dt, float *reviveTimer, float *scoreDoubleTimer, Game
             *counter = false;
         }
     }
-    if(*MoveDelay > 0.20f){
+    if(*MoveDelay > 0.29f){
         *slowTimer -= dt;
 
         if (*slowTimer <= 0.0f)
@@ -1647,7 +1647,7 @@ GameScreen ReplayScreen(char *text1, char *text2, ScoreList* ScoreList){
 
 }
 
-GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList* ScoreList){
+GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList* ScoreList, GameState *gameState){
 
     Texture2D SnakePart = LoadTexture("Graphics/SnakePart.png");
     Texture2D SnakeHead = LoadTexture("Graphics/SnakeHead.png");
@@ -1668,6 +1668,8 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
     Texture2D heart  = LoadTexture("Graphics/heart.png");
 
     Font fontRegular = LoadFontEx("resources/FFFFORWA.ttf", 128, 0, 0);
+    Font robotoRegular = LoadFontEx("resources/Roboto-SemiBoldItalic.ttf", 128, 0, 0);
+    SetTextureFilter(robotoRegular.texture, TEXTURE_FILTER_BILINEAR);
 
     Music gameplayMusic = LoadMusicStream("resources/MilkyWay.mp3");
     SetMusicVolume(gameplayMusic, 0.5f);  
@@ -1680,16 +1682,21 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
     int dirCol=0;
     int dirRow=1;
 
+    bool showTutorial = false;
     bool grow = false;
     bool gameOver = false;
     bool scoreDouble = false;
-    float MoveDelay = 0.20f;
+    float MoveDelay = 0.25f;
 
     int score = 0;
     insertScore(ScoreList,score);
 
-    GameState gameState = PLAYING;
-
+    if(*gameState == TUTORIAL){
+        showTutorial = true;
+    }
+    
+    *gameState = PLAYING;
+    
     float reviveTimer = 0.0f;
     float scoreDoubleTimer = 0.0f;
     float slowTimer = 0.0f;
@@ -1698,7 +1705,6 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
 
     int displayTime = 0;
     
-
 
     LinkedList* snake = InitSnake();
     Stack * health = initHealth(heart);
@@ -1717,24 +1723,27 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
 
     while (!WindowShouldClose()){
 
+        if(showTutorial){
+            *gameState = PAUSED;
+        }
         UpdateMusicStream(gameplayMusic);
 
         float dt = GetFrameTime();
         bool showTimer = false;
 
-        HandleInput(&dirCol, &dirRow, AbilityQueue, &snake, movements, &reviveTimer, &scoreDoubleTimer, &counter, &gameState, dirColSave, dirRowSave, &scoreDouble, &MoveDelay, &slowTimer);
-        UpdateCountdown(dt, &reviveTimer, &scoreDoubleTimer, &gameState, &scoreDouble, &MoveDelay, &slowTimer, &counter);
+        HandleInput(&dirCol, &dirRow, AbilityQueue, &snake, movements, &reviveTimer, &scoreDoubleTimer, &counter, gameState, dirColSave, dirRowSave, &scoreDouble, &MoveDelay, &slowTimer);
+        UpdateCountdown(dt, &reviveTimer, &scoreDoubleTimer, gameState, &scoreDouble, &MoveDelay, &slowTimer, &counter);
 
         if(dirCol != 0 || dirRow != 0){
             dirColSave = dirCol;
             dirRowSave = dirRow;
         }
         
-        if(gameState != PAUSED){
+        if(*gameState != PAUSED){
             moveTimer += dt;
             while(moveTimer >= MoveDelay && !gameOver ){
                 
-                MoveSnake(snake, movements, &dirCol, &dirRow,&gameOver, &grow, text1, text2, &gameState, &counter);
+                MoveSnake(snake, movements, &dirCol, &dirRow,&gameOver, &grow, text1, text2, gameState, &counter);
                 moveTimer -= MoveDelay;
 
                 if (!gameOver && (dirCol != 0 || dirRow != 0)) {
@@ -1744,10 +1753,10 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
             float alpha = moveTimer / MoveDelay;
 
             UpdateSmoothMovement(snake, alpha);
-            UpdateFood(&activeFood, snake, health, AbilityQueue, &grow, &gameOver, text1, text2,movements, &dirCol, &dirRow, &gameState, ScoreList->head, &scoreDouble, &counter);
+            UpdateFood(&activeFood, snake, health, AbilityQueue, &grow, &gameOver, text1, text2,movements, &dirCol, &dirRow, gameState, ScoreList->head, &scoreDouble, &counter);
         }
 
-        if (gameState == REVIVE_COUNTDOWN) {
+        if (*gameState == REVIVE_COUNTDOWN) {
             displayTime = (int)reviveTimer;
             showTimer = true;
             strcpy(abilityText, "Can Revive :");
@@ -1757,7 +1766,7 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
             showTimer = true;
             strcpy(abilityText, "Score Bonus :");
 
-        } else if (MoveDelay > 0.24f) {
+        } else if (MoveDelay > 0.29f) {
             displayTime = (int)slowTimer;
             showTimer = true;
             strcpy(abilityText, "Move Slow :");
@@ -1819,8 +1828,6 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
         DrawHealth(health,heart);
         DrawAbilityQueue(AbilityQueue,ability_2x_B, ability_slow_B, ability_revive_B);
         sprintf(text, "%d", ScoreList->head->score);
-        //DrawText(text, 700, 560, 35, WHITE);
-        //DrawText("SCORE : ", 550, 560, 35, RED);
         DrawRectangle(540, 545, 300, 100, 
                       (Color){0, 0, 0, 120});  
         DrawTextEx(fontRegular, "SCORE : ", (Vector2){ 550, 560 }, 35, 2, button_orange);
@@ -1833,15 +1840,37 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
 
         }
 
-        if (gameState == PAUSED) {
+        if (*gameState == PAUSED && !showTutorial) {
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), 
                       (Color){0, 0, 0, 120});         
         DrawText("PAUSED",    285, 220, 60, WHITE);
         DrawText("Press Esc to resume", 280, 300, 25, LIGHTGRAY);
         DrawText("Safe Start: Choose a direction", 230, 350, 25, GOLD);
         }
+        if (*gameState == PAUSED && showTutorial) {
+        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), 
+                      (Color){0, 0, 0, 200});         
+        DrawText("TUTORIAL",    250, 50, 60, WHITE);
+   
+        DrawTextEx(robotoRegular, "Press Esc to resume", (Vector2){ 250, 170 }, 35, 2, LIGHTGRAY);
+        DrawTextEx(robotoRegular, "Press [E] -> ACTIVATE ABILITY", (Vector2){ 230, 250 }, 25, 2, GOLD);
+        DrawTextEx(robotoRegular, "BOMB ->  - HEALTH (Watch Out!)", (Vector2){ 230, 300 }, 25, 2, GOLD);
+        DrawTextEx(robotoRegular, "EGG ->  + HEALTH (Stay Strong!)", (Vector2){ 230, 350 }, 25, 2, GOLD);
+        DrawTextEx(robotoRegular, "DOUBLE SCORE", (Vector2){ 330, 410 }, 25, 2, GOLD);
+        DrawTextEx(robotoRegular, "SLOW SLITHER", (Vector2){ 330, 470 }, 25, 2, GOLD);
+        DrawTextEx(robotoRegular, "REVIVE SOUL", (Vector2){ 330, 530 }, 25, 2, GOLD);
+
+        DrawTexture(bomb, 170, 290, WHITE);
+        DrawTexture(egg, 170, 340, WHITE);
+        DrawTexture(ability_2x_B, 240, 390, WHITE);
+        DrawTexture(ability_slow_B, 240, 450, WHITE);
+        DrawTexture(ability_revive_B, 240, 510, WHITE);
+        
+        }
         
         EndDrawing();
+        if(*gameState == PLAYING)
+            showTutorial = false;
     }
     
     free(snake);
@@ -2208,6 +2237,7 @@ int main() {
 
     // Current screen
     GameScreen currentScreen = MENU;
+    GameState gameState= TUTORIAL;
 
     while (!WindowShouldClose()) {
         PlayMusicStream(bgMusic);
@@ -2224,7 +2254,7 @@ int main() {
             case MAP: currentScreen = SelectMap(Map1, Map2, Map3, Map4, &Selected,  Back_button,bgMusic);
                 break;
 
-            case GAME: currentScreen = MapScreen(Selected,Back_button, ScoreList);
+            case GAME: currentScreen = MapScreen(Selected,Back_button, ScoreList, &gameState);
                 break;
 
             case SCORES: currentScreen = ScoreScreen(Back_button,bgMusic, History_button, Highest_button);
