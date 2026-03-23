@@ -823,7 +823,6 @@ void TrySpawnSpecial(ActiveFood *active, LinkedList *snake)
 bool ReviveScreen(char *text1, char *text2){
     Texture2D Background = LoadTexture("Graphics/gameover bg.png");
 
-    Texture2D Quit_button = LoadTexture("Graphics/quit.png");
     Sound lose = LoadSound("resources/lose.mp3");
 
     Music bgmusic = LoadMusicStream("resources/Camp Approach.mp3");
@@ -841,6 +840,11 @@ bool ReviveScreen(char *text1, char *text2){
     float baseY = buttonPos.y;
     float hoverY = baseY - 5;
 
+    Texture2D Quit_button = LoadTexture("Graphics/quit.png");
+    Vector2 Quit_buttonPos = {370,350};
+    float Quit_baseY = Quit_buttonPos.y;
+    float Quit_hoverY = Quit_baseY - 5;
+
     bool soundPlayed = false;
     
     while (!WindowShouldClose()){
@@ -856,9 +860,7 @@ bool ReviveScreen(char *text1, char *text2){
 
         Vector2 mouse = GetMousePosition();
         Rectangle buttonRec = {buttonPos.x, buttonPos.y, button.width, button.height};
-
-        Vector2 Back_buttonPos = {370,350};
-        Rectangle BackRec   = {Back_buttonPos.x, Back_buttonPos.y, Quit_button.width, Quit_button.height};
+        Rectangle QuitRec  = {Quit_buttonPos.x, Quit_buttonPos.y, Quit_button.width, Quit_button.height};
 
         bool hoveringAnyButton = false;
         if(CheckCollisionPointRec(mouse, buttonRec)) {
@@ -871,7 +873,17 @@ bool ReviveScreen(char *text1, char *text2){
             buttonPos.y += 0.5;
         }
 
-        if(CheckCollisionPointRec(mouse, BackRec)) {
+        if(CheckCollisionPointRec(mouse, QuitRec)) {
+            hoveringAnyButton = true;
+
+            if(Quit_buttonPos.y > Quit_hoverY)
+                Quit_buttonPos.y -= 0.5;
+        }
+        else if(Quit_buttonPos.y < Quit_baseY) {
+            Quit_buttonPos.y += 0.5;
+        }
+
+        if(CheckCollisionPointRec(mouse, QuitRec)) {
             hoveringAnyButton = true;
         }
 
@@ -880,7 +892,7 @@ bool ReviveScreen(char *text1, char *text2){
         else
             SetMouseCursor(MOUSE_CURSOR_DEFAULT);
 
-        if(CheckCollisionPointRec(mouse, BackRec) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
+        if(CheckCollisionPointRec(mouse, QuitRec) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
             SetMouseCursor(MOUSE_CURSOR_DEFAULT);
             UnloadTexture(Background);
             UnloadTexture(Quit_button);
@@ -901,7 +913,7 @@ bool ReviveScreen(char *text1, char *text2){
         ClearBackground(DARKGRAY);
         DrawTexture(Background, 0, 0, WHITE);
 
-        DrawTexture(Quit_button, Back_buttonPos.x, Back_buttonPos.y, WHITE);
+        DrawTexture(Quit_button, Quit_buttonPos.x, Quit_buttonPos.y, WHITE);
         DrawTexture(button, buttonPos.x, buttonPos.y, WHITE);
         DrawTexturePro(dialog_box, source, dest, origin, 0.0f, WHITE);
         DrawText(text1, 390, 80, 40, BLACK);
@@ -1523,7 +1535,6 @@ GameScreen ReplayScreen(char *text1, char *text2, ScoreList* ScoreList){
     Texture2D Background = LoadTexture("Graphics/gameover bg.png");
     Font fontRegular = LoadFontEx("resources/FFFFORWA.ttf", 128, 0, 0);
 
-    Texture2D Quit_button = LoadTexture("Graphics/quit.png");
     Sound lose = LoadSound("resources/lose.mp3");
 
     Music bgmusic = LoadMusicStream("resources/Camp Approach.mp3");
@@ -1541,6 +1552,11 @@ GameScreen ReplayScreen(char *text1, char *text2, ScoreList* ScoreList){
     float baseY = buttonPos.y;
     float hoverY = baseY - 5;
 
+    Texture2D Quit_button = LoadTexture("Graphics/quit.png");
+    Vector2 Quit_buttonPos = {370,350};
+    float Quit_baseY = Quit_buttonPos.y;
+    float Quit_hoverY = Quit_baseY - 5;
+
     bool soundPlayed = false;
     char text[100];
     
@@ -1557,9 +1573,7 @@ GameScreen ReplayScreen(char *text1, char *text2, ScoreList* ScoreList){
 
         Vector2 mouse = GetMousePosition();
         Rectangle buttonRec = {buttonPos.x, buttonPos.y, button.width, button.height};
-
-        Vector2 Back_buttonPos = {370,350};
-        Rectangle BackRec   = {Back_buttonPos.x, Back_buttonPos.y, Quit_button.width, Quit_button.height};
+        Rectangle QuitRec  = {Quit_buttonPos.x, Quit_buttonPos.y, Quit_button.width, Quit_button.height};
 
         bool hoveringAnyButton = false;
         if(CheckCollisionPointRec(mouse, buttonRec)) {
@@ -1572,7 +1586,17 @@ GameScreen ReplayScreen(char *text1, char *text2, ScoreList* ScoreList){
             buttonPos.y += 0.5;
         }
 
-        if(CheckCollisionPointRec(mouse, BackRec)) {
+        if(CheckCollisionPointRec(mouse, QuitRec)) {
+            hoveringAnyButton = true;
+
+            if(Quit_buttonPos.y > Quit_hoverY)
+                Quit_buttonPos.y -= 0.5;
+        }
+        else if(Quit_buttonPos.y < Quit_baseY) {
+            Quit_buttonPos.y += 0.5;
+        }
+
+        if(CheckCollisionPointRec(mouse, QuitRec)) {
             hoveringAnyButton = true;
         }
 
@@ -1581,7 +1605,7 @@ GameScreen ReplayScreen(char *text1, char *text2, ScoreList* ScoreList){
         else
             SetMouseCursor(MOUSE_CURSOR_DEFAULT);
 
-        if(CheckCollisionPointRec(mouse, BackRec) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
+        if(CheckCollisionPointRec(mouse, QuitRec) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
             SetMouseCursor(MOUSE_CURSOR_DEFAULT);
             UnloadTexture(Background);
             UnloadTexture(Quit_button);
@@ -1602,16 +1626,14 @@ GameScreen ReplayScreen(char *text1, char *text2, ScoreList* ScoreList){
         ClearBackground(DARKGRAY);
         DrawTexture(Background, 0, 0, WHITE);
 
-        DrawTexture(Quit_button, Back_buttonPos.x, Back_buttonPos.y, WHITE);
+        DrawTexture(Quit_button, Quit_buttonPos.x, Quit_buttonPos.y, WHITE);
         DrawTexture(button, buttonPos.x, buttonPos.y, WHITE);
         DrawTexturePro(dialog_box, source, dest, origin, 0.0f, WHITE);
         DrawText(text1, 390, 80, 40, BLACK);
         DrawText(text2, 390, 130, 40, BLACK);
         sprintf(text, "%d", ScoreList->head->score);
-        //DrawText(text, 600, 450, 50, RED);
-        //DrawText("SCORE : ", 390, 450, 50, WHITE);
-        DrawTextEx(fontRegular, "SCORE : ", (Vector2){ 390, 460 }, 55, 2, button_orange);
-        DrawTextEx(fontRegular, text, (Vector2){ 610, 460 }, 55, 2, WHITE);
+        DrawTextEx(fontRegular, "SCORE : ", (Vector2){ 400, 480 }, 55, 2, button_orange);
+        DrawTextEx(fontRegular, text, (Vector2){ 620, 480 }, 55, 2, WHITE);
         
 
         EndDrawing();
@@ -1799,6 +1821,8 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
         sprintf(text, "%d", ScoreList->head->score);
         //DrawText(text, 700, 560, 35, WHITE);
         //DrawText("SCORE : ", 550, 560, 35, RED);
+        DrawRectangle(540, 545, 300, 100, 
+                      (Color){0, 0, 0, 120});  
         DrawTextEx(fontRegular, "SCORE : ", (Vector2){ 550, 560 }, 35, 2, button_orange);
         DrawTextEx(fontRegular, text, (Vector2){ 700, 560 }, 35, 2, WHITE);
         
@@ -1949,6 +1973,10 @@ GameScreen ScoreScreen(Texture2D Back_button, Music bgMusic, Texture2D History, 
         Rectangle BackRec   = {Back_buttonPos.x, Back_buttonPos.y, Back_button.width, Back_button.height};
 
         bool hoveringAnyButton = false;
+
+        if(CheckCollisionPointRec(mouse, BackRec)) {
+            hoveringAnyButton = true;
+        }
 
         // Score button
         if(CheckCollisionPointRec(mouse, ScoreRec)) {
