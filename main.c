@@ -24,10 +24,8 @@ typedef enum {
 
 typedef enum {
     PLAYING,
-    REVIVE_COUNTDOWN,
     PAUSED,
-    TUTORIAL,
-    GAME_OVER
+    TUTORIAL
 } GameState;
 
 // Singly Linked List
@@ -924,7 +922,7 @@ bool ReviveScreen(char *text1, char *text2){
     return 0;
 }
 
-void UpdateHealth(Stack *health, LinkedList *snake, FoodType type, bool *gameOver, char *text1, char *text2, SnakeStack* movements, int* dirCol, int* dirRow, GameState *gameState, bool *counter){
+void UpdateHealth(Stack *health, LinkedList *snake, FoodType type, bool *gameOver, char *text1, char *text2, SnakeStack* movements, int* dirCol, int* dirRow, GameState *gameState, bool *canRevive, bool *counter){
     if (type == FOOD_EGG){
             
         StackNode *temp = health->top;
@@ -950,7 +948,7 @@ void UpdateHealth(Stack *health, LinkedList *snake, FoodType type, bool *gameOve
         pop(health);
         if (health->top == NULL){
 
-            if(*gameState == REVIVE_COUNTDOWN){
+            if(*canRevive){
                 strcpy(text1, "Just one more");
                 strcpy(text2, "try for me?");
                 bool IsRevive = ReviveScreen(text1, text2);
@@ -976,7 +974,7 @@ void UpdateHealth(Stack *health, LinkedList *snake, FoodType type, bool *gameOve
     }
 }
 
-void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* AbilityQueue, bool *grow, bool *gameOver, char *text1, char *text2, SnakeStack* movements, int* dirCol, int* dirRow, GameState *gameState, scoreNode *thisRound, bool *scoreDouble, bool *counter)
+void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* AbilityQueue, bool *grow, bool *gameOver, char *text1, char *text2, SnakeStack* movements, int* dirCol, int* dirRow, GameState *gameState, scoreNode *thisRound, bool *canRevive, bool *scoreDouble, bool *counter)
 {
     // --- Apple eaten ---
     if (IsEating(snake, active->apple))
@@ -1016,7 +1014,7 @@ void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* Abi
     if (IsEating(snake, active->special))
     {
         FoodType type = active->special->type;
-        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState, counter);
+        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState, canRevive, counter);
         free(active->special);
         active->special = NULL;
 
@@ -1024,7 +1022,7 @@ void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* Abi
     if (IsEating(snake, active->special1))
     {    
         FoodType type = active->special1->type;
-        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState, counter);
+        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState, canRevive, counter);
         free(active->special1);
         active->special1 = NULL;
 
@@ -1033,7 +1031,7 @@ void UpdateFood(ActiveFood *active, LinkedList *snake, Stack *health, Queue* Abi
     {
         
         FoodType type = active->special2->type;
-        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState, counter);
+        UpdateHealth(health, snake, type, gameOver, text1, text2, movements, dirCol, dirRow, gameState, canRevive, counter);
         free(active->special2);
         active->special2 = NULL;
 
@@ -1168,13 +1166,13 @@ void DrawAbilityQueue(Queue *AbilityQueue,Texture2D ability_2x, Texture2D abilit
     }
 }
 
-void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, int* dirCol, int* dirRow, float *reviveTimer, float *scoreDoubleTimer, bool *counter, GameState *gameState, bool *scoreDouble, float *MoveDelay, float *slowTimer) {
+void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, int* dirCol, int* dirRow, float *reviveTimer, float *scoreDoubleTimer, bool *counter, GameState *gameState, bool *canRevive, bool *scoreDouble, float *MoveDelay, float *slowTimer) {
     if (!AbilityQueue->front) return;
 
     switch (AbilityQueue->front->type) {
         case ABILITY_REVIVE:
             *counter = true;
-            *gameState = REVIVE_COUNTDOWN;
+            *canRevive = true;
             *reviveTimer = 5.0f;
             break;
 
@@ -1201,7 +1199,7 @@ void useAbility(Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, 
     }   
 }
 
-void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, float *reviveTimer, float *scoreDoubleTimer, bool *counter, GameState *gameState, int dirColSave, int dirRowSave, bool *scoreDouble, float *MoveDelay, float *slowTimer)
+void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, SnakeStack* movements, float *reviveTimer, float *scoreDoubleTimer, bool *counter, GameState *gameState, int dirColSave, int dirRowSave, bool *canRevive, bool *scoreDouble, float *MoveDelay, float *slowTimer)
 {
     
     if((IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W) ) && *dirY != 1)
@@ -1229,13 +1227,13 @@ void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, 
     }
     if (IsKeyPressed(KEY_E)) {
         if(!*counter){
-            useAbility(AbilityQueue, snake, movements, dirX, dirY, reviveTimer, scoreDoubleTimer, counter, gameState, scoreDouble, MoveDelay, slowTimer);
+            useAbility(AbilityQueue, snake, movements, dirX, dirY, reviveTimer, scoreDoubleTimer, counter, gameState, canRevive, scoreDouble, MoveDelay, slowTimer);
             *counter = true;
 
         }
     }
     if (IsKeyPressed(KEY_P) || IsKeyPressed(KEY_ESCAPE)) {
-        if (*gameState == PLAYING){
+        if (*gameState != PAUSED){
 
             *gameState = PAUSED;
             *dirX = 0;
@@ -1251,15 +1249,15 @@ void HandleInput(int *dirX, int *dirY, Queue *AbilityQueue, LinkedList** snake, 
     }
 
 }
-void UpdateCountdown(float dt, float *reviveTimer, float *scoreDoubleTimer, GameState *gameState, bool *scoreDouble, float *MoveDelay, float *slowTimer, bool *counter){
+void UpdateCountdown(float dt, float *reviveTimer, float *scoreDoubleTimer, GameState *gameState, bool *canRevive, bool *scoreDouble, float *MoveDelay, float *slowTimer, bool *counter){
 
-    if (*gameState == REVIVE_COUNTDOWN){
+    if (*canRevive){
         *reviveTimer -= dt;
 
         if (*reviveTimer <= 0.0f)
         {
-            *gameState = GAME_OVER;
             *counter = false;
+            *canRevive = false;
         }
     }
     if(*scoreDouble){
@@ -1276,13 +1274,13 @@ void UpdateCountdown(float dt, float *reviveTimer, float *scoreDoubleTimer, Game
 
         if (*slowTimer <= 0.0f)
         {
-            *MoveDelay = 0.20f;
+            *MoveDelay = 0.25f;
             *counter = false;
         }
     }
 }
 
-void MoveSnake(LinkedList* snake, SnakeStack* movements, int *dirCol,int *dirRow, bool *gameOver, bool *grow, char *text1, char *text2, GameState *gameState, bool *counter)
+void MoveSnake(LinkedList* snake, SnakeStack* movements, int *dirCol,int *dirRow, bool *gameOver, bool *grow, char *text1, char *text2, GameState *gameState, bool *canRevive, bool *counter)
 {
     if (!snake || !snake->head) return;
 
@@ -1291,7 +1289,7 @@ void MoveSnake(LinkedList* snake, SnakeStack* movements, int *dirCol,int *dirRow
 
     if(newRow < 0 || newRow >= GRID_ROWS || newCol < 0 || newCol >= GRID_COLS){
         
-        if(*gameState == REVIVE_COUNTDOWN){
+        if(*canRevive){
             strcpy(text1, "Just one more");
             strcpy(text2, "try for me?");
             bool IsRevive = ReviveScreen(text1, text2);
@@ -1313,7 +1311,7 @@ void MoveSnake(LinkedList* snake, SnakeStack* movements, int *dirCol,int *dirRow
     }  
 
     if(CheckSelfCollision(snake, newRow, newCol)){
-        if(*gameState == REVIVE_COUNTDOWN){
+        if(*canRevive){
             strcpy(text1, "Just one more");
             strcpy(text2, "try for me?");
             bool IsRevive = ReviveScreen(text1, text2);
@@ -1671,6 +1669,7 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
     bool grow = false;
     bool gameOver = false;
     bool scoreDouble = false;
+    bool canRevive = false;
     float MoveDelay = 0.25f;
 
     int score = 0;
@@ -1715,8 +1714,8 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
         float dt = GetFrameTime();
         bool showTimer = false;
 
-        HandleInput(&dirCol, &dirRow, AbilityQueue, &snake, movements, &reviveTimer, &scoreDoubleTimer, &counter, gameState, dirColSave, dirRowSave, &scoreDouble, &MoveDelay, &slowTimer);
-        UpdateCountdown(dt, &reviveTimer, &scoreDoubleTimer, gameState, &scoreDouble, &MoveDelay, &slowTimer, &counter);
+        HandleInput(&dirCol, &dirRow, AbilityQueue, &snake, movements, &reviveTimer, &scoreDoubleTimer, &counter, gameState, dirColSave, dirRowSave, &canRevive, &scoreDouble, &MoveDelay, &slowTimer);
+        UpdateCountdown(dt, &reviveTimer, &scoreDoubleTimer, gameState, &canRevive, &scoreDouble, &MoveDelay, &slowTimer, &counter);
 
         if(dirCol != 0 || dirRow != 0){
             dirColSave = dirCol;
@@ -1727,7 +1726,7 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
             moveTimer += dt;
             while(moveTimer >= MoveDelay && !gameOver ){
                 
-                MoveSnake(snake, movements, &dirCol, &dirRow,&gameOver, &grow, text1, text2, gameState, &counter);
+                MoveSnake(snake, movements, &dirCol, &dirRow,&gameOver, &grow, text1, text2, gameState, &canRevive, &counter);
                 moveTimer -= MoveDelay;
 
                 if (!gameOver && (dirCol != 0 || dirRow != 0)) {
@@ -1737,10 +1736,10 @@ GameScreen MapScreen(Texture2D play_background,Texture2D Back_button, ScoreList*
             float alpha = moveTimer / MoveDelay;
 
             UpdateSmoothMovement(snake, alpha);
-            UpdateFood(&activeFood, snake, health, AbilityQueue, &grow, &gameOver, text1, text2,movements, &dirCol, &dirRow, gameState, ScoreList->head, &scoreDouble, &counter);
+            UpdateFood(&activeFood, snake, health, AbilityQueue, &grow, &gameOver, text1, text2,movements, &dirCol, &dirRow, gameState, ScoreList->head, &canRevive, &scoreDouble, &counter);
         }
 
-        if (*gameState == REVIVE_COUNTDOWN) {
+        if (canRevive) {
             displayTime = (int)reviveTimer;
             showTimer = true;
             strcpy(abilityText, "Can Revive :");
