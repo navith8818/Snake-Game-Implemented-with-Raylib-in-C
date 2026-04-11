@@ -1,51 +1,63 @@
 # 🐍 Snake Game (C + Raylib)
 
-A custom Snake game built from scratch in **C** using **Raylib**, with several improvements over the classic version.
+A modern reimagining of the classic Snake game, built from scratch in **C** using **Raylib**, with extended gameplay mechanics and a strong focus on **data structures and system design**.
 
-This project focuses not only on gameplay, but also on implementing core **data structures and algorithms** in a practical way.
-
----
-
-## 🚀 Features
-
-- ❤️ Health system (not just instant game over)
-- 🏆 Score system with sorting
-- 🗺️ Multiple map selections
-- ⚡ Ability system for enhanced gameplay
-- 🎮 Smooth and responsive controls
-- 🧠 Built using low-level logic (no game engine)
+> Not just a game — this project explores how core computer science concepts can be applied in real-time interactive systems.
 
 ---
 
-## 🧩 Data Structures Used
+## 🎮 Gameplay Preview
 
-This project was designed to apply fundamental DSA concepts:
-
-- Singly Linked List → Snake body
-- Doubly Linked List → Map carousel
-- Queue → Handle ability system 
-- Stack → Health system and Store positions for revive ability
+<!-- ADD GIF OR SCREENSHOT HERE -->
+<!-- Example: ![Gameplay](assets/gameplay.gif) -->
 
 ---
 
-## 📊 Algorithms
+## 🚀 Key Features
 
-- Insertion Sort → Used for score management
-
----
-
-## 🛠️ Tech Stack
-
-- **Language:** C  
-- **Graphics Library:** Raylib  
+- ❤️ **Health System** — survive beyond simple collisions  
+- 🏆 **Score System** — sorted and managed efficiently  
+- 🗺️ **Multiple Maps** — varied gameplay environments  
+- ⚡ **Ability System** — adds strategy and depth  
+- 💣 **Dynamic Game Elements** — non-linear gameplay  
+- 🎮 **Smooth Controls** — responsive and consistent  
 
 ---
 
-## ▶️ How to Compile & Run
+## 🧠 Technical Highlights
 
-To compile this project, first install the **Raylib** library and ensure your compiler is properly set up.
+This project is designed to demonstrate practical use of core **Data Structures & Algorithms**:
 
-### 🧑‍💻 Using Visual Studio Code (Recommended)
+| Concept | Implementation |
+|--------|--------------|
+| Singly Linked List | Snake body representation |
+| Doubly Linked List | Map carousel system |
+| Queue | Ability/event scheduling |
+| Stack | Health system & revive logic |
+| Insertion Sort | Score ranking system |
+
+---
+
+## 🛠️ Built With
+
+- **C (Low-level system programming)**
+- **Raylib (Lightweight graphics library)**
+
+---
+
+## 📦 Download & Play
+
+👉 **[Download Latest Version](../../releases)** *(Recommended)*  
+
+---
+
+## ▶️ Run Locally
+
+### Requirements
+- Raylib installed
+- C compiler (GCC / MinGW)
+
+### Steps (VS Code)
 
 1. Navigate to the Raylib directory.
 
@@ -56,18 +68,12 @@ To compile this project, first install the **Raylib** library and ensure your co
 
 3. Open that folder in **VS Code**.
 
-4. Press **F5** to compile and run the `main.c` file.
+4. Press **F5** to compile and run the `main.c` file.  
 
 ---
 
-### 🎮 Run Without Compiling
+## ⭐ Show Your Support
 
-If you don’t want to compile manually, you can download the precompiled version:
+If you found this interesting, consider giving it a ⭐ — it helps a lot!
 
-👉 https://drive.google.com/file/d/10x92tbggjZjRQO0BL9aRhgTRL_hS01sI/view?usp=sharing
-
-Then simply run and enjoy the game.👍
-
-
-
-
+---
