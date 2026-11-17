@@ -34,14 +34,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: raylib
-          key: raylib-web-5.0-${{ runner.os }}
+          key: raylib-web-5.0-jpg-${{ runner.os }}
 
-      - name: Build Raylib Library for Web
+      - name: Build Raylib Library for Web (with JPEG Support)
         if: steps.cache-raylib.outputs.cache-hit != 'true'
         run: |
           git clone --depth 1 --branch 5.0 https://github.com/raysan5/raylib.git raylib
+          # Explicitly enable JPEG decoding in raylib config
+          sed -i 's/#define SUPPORT_FILEFORMAT_JPG.*/#define SUPPORT_FILEFORMAT_JPG 1/g' raylib/src/config.h
           cd raylib/src
-          emmake make PLATFORM=PLATFORM_WEB -B
+          emmake make PLATFORM=PLATFORM_WEB CFLAGS="-DSUPPORT_FILEFORMAT_JPG=1" -B
 
       - name: Sync case sensitivity for resources
         run: |
@@ -49,11 +51,11 @@ jobs:
           if [ -f "resources/lose.MP3" ]; then cp "resources/lose.MP3" "resources/lose.mp3"; fi
           if [ -f "resources/FFFFORWA.TTF" ]; then cp "resources/FFFFORWA.TTF" "resources/FFFFORWA.ttf"; fi
 
-      - name: Compile Game to WebAssembly (Asyncify)
+      - name: Compile Game to WebAssembly (High Performance -O3)
         run: |
           mkdir -p dist
           emcc main.c -o dist/index.html \
-            -Os -Wall \
+            -O3 -Wall \
             -DPLATFORM_WEB \
             -I./raylib/src \
             ./raylib/src/libraylib.a \
@@ -61,8 +63,9 @@ jobs:
             -s ASYNCIFY=1 \
             -s ASYNCIFY_STACK_SIZE=65536 \
             -s ALLOW_MEMORY_GROWTH=1 \
-            -s INITIAL_MEMORY=67108864 \
+            -s INITIAL_MEMORY=134217728 \
             -s FORCE_FILESYSTEM=1 \
+            -s ENVIRONMENT=web \
             --preload-file Graphics \
             --preload-file resources \
             --shell-file minshell.html
