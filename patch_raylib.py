@@ -13,7 +13,7 @@ def patch_file(path, old, new):
     print(f"Successfully patched {path}")
     return True
 
-# 1. Patch rcore.c
+# 1. Patch rcore.c: WaitTime web support
 rcore_path = 'raylib/src/rcore.c'
 with open(rcore_path, 'r', encoding='utf-8') as f:
     rcore = f.read()
@@ -27,7 +27,7 @@ with open(rcore_path, 'w', encoding='utf-8') as f:
     f.write(rcore)
 print('Successfully patched raylib/src/rcore.c')
 
-# 2. Patch raudio.c
+# 2. Patch raudio.c: Stop and untrack buffer BEFORE uninit & free
 raudio_path = 'raylib/src/raudio.c'
 t_raudio = """void UnloadAudioBuffer(AudioBuffer *buffer)
 {
@@ -52,17 +52,14 @@ r_raudio = """void UnloadAudioBuffer(AudioBuffer *buffer)
 }"""
 patch_file(raudio_path, t_raudio, r_raudio)
 
-# 3. Patch miniaudio.h
+# 3. Patch miniaudio.h: Wrap onaudioprocess with heap-rebind and try/catch protection
 miniaudio_path = 'raylib/src/external/miniaudio.h'
 with open(miniaudio_path, 'r', encoding='utf-8') as f:
     ma = f.read()
 
-t_active = "device.scriptNode.onaudioprocess = function(e) {\n                if (device.intermediaryBufferView == null || device.intermediaryBufferView.length == 0) {"
+t_active = """device.scriptNode.onaudioprocess = function(e) {
+                if (device.intermediaryBufferView == null || device.intermediaryBufferView.length == 0) {"""
 r_active = """device.scriptNode.onaudioprocess = function(e) {
-                if (typeof Asyncify !== 'undefined' && (Asyncify.currData !== null || Asyncify.state !== 0)) {
-                    for (var i = 0; i < e.outputBuffer.numberOfChannels; ++i) e.outputBuffer.getChannelData(i).fill(0.0);
-                    return;
-                }
                 try {
                 if (device.intermediaryBufferView == null || device.intermediaryBufferView.buffer !== Module.HEAPF32.buffer || device.intermediaryBufferView.length == 0) {"""
 

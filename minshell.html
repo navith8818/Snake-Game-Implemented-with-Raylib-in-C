@@ -214,56 +214,23 @@
         handleGlobalError(str, reason);
       };
 
-      // Wrap AudioContext to shield against WebAssembly Asyncify re-entrancy
-      (function() {
-        var AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) return;
-        var origCreateScriptProcessor = AudioCtx.prototype.createScriptProcessor;
-        if (!origCreateScriptProcessor) return;
-        AudioCtx.prototype.createScriptProcessor = function() {
-          var node = origCreateScriptProcessor.apply(this, arguments);
-          var realHandler = null;
-          Object.defineProperty(node, 'onaudioprocess', {
-            get: function() { return realHandler; },
-            set: function(fn) { realHandler = fn; }
-          });
-          node.addEventListener('audioprocess', function(e) {
-            // If Asyncify is currently unwinding, sleeping, or rewinding, safely play silence instead of crashing Wasm
-            if (typeof Asyncify !== 'undefined' && (Asyncify.currData !== null || Asyncify.state !== 0)) {
-              for (var i = 0; i < e.outputBuffer.numberOfChannels; ++i) {
-                e.outputBuffer.getChannelData(i).fill(0);
-              }
-              return;
-            }
-            try {
-              if (typeof realHandler === 'function') {
-                realHandler(e);
-              }
-            } catch (err) {
-              console.warn('Caught transient audio error:', err);
-              for (var i = 0; i < e.outputBuffer.numberOfChannels; ++i) {
-                e.outputBuffer.getChannelData(i).fill(0);
-              }
-            }
-          });
-          return node;
-        };
-      })();
-
       // Focus canvas & auto-resume Web Audio on user gesture
       var canvasElem = document.getElementById('canvas');
       function unlockAudio() {
         canvasElem.focus();
-        var AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (AudioCtx) {
-          // If any AudioContext is suspended, resume it
-          if (window.audioCtx && window.audioCtx.state === 'suspended') {
-            window.audioCtx.resume();
+        if (typeof window !== 'undefined' && window.miniaudio && window.miniaudio.devices) {
+          for (var i = 0; i < window.miniaudio.devices.length; ++i) {
+            var dev = window.miniaudio.devices[i];
+            if (dev && dev.webaudio && dev.webaudio.state === 'suspended') {
+              dev.webaudio.resume();
+            }
           }
         }
       }
       canvasElem.addEventListener('click', unlockAudio);
+      window.addEventListener('click', unlockAudio);
       window.addEventListener('keydown', unlockAudio);
+      window.addEventListener('touchstart', unlockAudio);
     </script>
     {{{ SCRIPT }}}
   </body>

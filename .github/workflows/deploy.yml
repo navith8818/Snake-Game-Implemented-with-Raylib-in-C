@@ -34,7 +34,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: raylib
-          key: raylib-web-5.0-v8-${{ runner.os }}
+          key: raylib-web-5.0-v9-${{ runner.os }}
 
       - name: Build Raylib Library for Web (with JPEG & Asyncify Audio Protection)
         if: steps.cache-raylib.outputs.cache-hit != 'true'
