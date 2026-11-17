@@ -34,7 +34,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: raylib
-          key: raylib-web-5.0-jpg-${{ runner.os }}
+          key: raylib-web-5.0-v3-${{ runner.os }}
 
       - name: Build Raylib Library for Web (with JPEG Support)
         if: steps.cache-raylib.outputs.cache-hit != 'true'
@@ -43,7 +43,7 @@ jobs:
           # Explicitly enable JPEG decoding in raylib config
           sed -i 's/#define SUPPORT_FILEFORMAT_JPG.*/#define SUPPORT_FILEFORMAT_JPG 1/g' raylib/src/config.h
           cd raylib/src
-          emmake make PLATFORM=PLATFORM_WEB CFLAGS="-DSUPPORT_FILEFORMAT_JPG=1" -B
+          emmake make PLATFORM=PLATFORM_WEB CUSTOM_CFLAGS="-DSUPPORT_FILEFORMAT_JPG=1" -B
 
       - name: Sync case sensitivity for resources
         run: |
