@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake POP</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #0b0c10;
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+      }
+      #game-container {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      canvas.emscripten {
+        border: 2px solid #232733;
+        border-radius: 8px;
+        background-color: #000;
+        display: block;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        outline: none;
+      }
+      #status-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(11, 12, 16, 0.95);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        border-radius: 8px;
+        z-index: 10;
+        transition: opacity 0.3s ease;
+      }
+      .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid #ef3719;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 16px;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      #status-text {
+        font-size: 18px;
+        font-weight: 500;
+        color: #f1f1f1;
+        text-align: center;
+      }
+      .controls-hint {
+        margin-top: 12px;
+        font-size: 13px;
+        color: #8b949e;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="status-overlay">
+        <div class="spinner" id="spinner"></div>
+        <div id="status-text">Loading Snake POP...</div>
+      </div>
+      <canvas class="emscripten" id="canvas" width="800" height="600" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+      <div class="controls-hint">Click on game window to focus &amp; enable audio</div>
+    </div>
+
+    <script type="text/javascript">
+      var statusOverlay = document.getElementById('status-overlay');
+      var statusText = document.getElementById('status-text');
+      var spinner = document.getElementById('spinner');
+
+      var Module = {
+        print: function(text) {
+          console.log(text);
+        },
+        printErr: function(text) {
+          console.error(text);
+        },
+        canvas: (function() {
+          var canvas = document.getElementById('canvas');
+          canvas.addEventListener("webglcontextlost", function(e) {
+            alert('WebGL context lost. Please reload the page.');
+            e.preventDefault();
+          }, false);
+          return canvas;
+        })(),
+        setStatus: function(text) {
+          if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
+          if (text === Module.setStatus.last.text) return;
+          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (m && now - Module.setStatus.last.time < 30) return;
+          Module.setStatus.last.time = now;
+          Module.setStatus.last.text = text;
+
+          if (m) {
+            text = m[1];
+            statusText.innerHTML = text + ' (' + Math.round((parseInt(m[2]) / parseInt(m[4])) * 100) + '%)';
+          } else {
+            statusText.innerHTML = text;
+          }
+
+          if (text === '') {
+            statusOverlay.style.opacity = '0';
+            setTimeout(function() {
+              statusOverlay.style.display = 'none';
+            }, 300);
+          } else {
+            statusOverlay.style.display = 'flex';
+            statusOverlay.style.opacity = '1';
+          }
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function(left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(left ? 'Preparing assets (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')...' : '');
+        }
+      };
+
+      Module.setStatus('Downloading game data...');
+
+      window.onerror = function(event) {
+        Module.setStatus('An error occurred during loading. Check browser console.');
+        spinner.style.display = 'none';
+      };
+
+      // Click to focus and resume web audio
+      var canvasElem = document.getElementById('canvas');
+      canvasElem.addEventListener('click', function() {
+        canvasElem.focus();
+      });
+    </script>
+    {{{ SCRIPT }}}
+  </body>
+</html>
