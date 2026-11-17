@@ -54,7 +54,7 @@ jobs:
       - name: Compile Game to WebAssembly (High Performance -O3)
         run: |
           mkdir -p dist
-          emcc main.c -o dist/index.html \
+          emcc main.c web_compat.c -o dist/index.html \
             -O3 -Wall \
             -DPLATFORM_WEB \
             -I./raylib/src \
@@ -66,6 +66,7 @@ jobs:
             -s INITIAL_MEMORY=134217728 \
             -s FORCE_FILESYSTEM=1 \
             -s ENVIRONMENT=web \
+            -Wl,--allow-multiple-definition \
             --preload-file Graphics \
             --preload-file resources \
             --shell-file minshell.html
