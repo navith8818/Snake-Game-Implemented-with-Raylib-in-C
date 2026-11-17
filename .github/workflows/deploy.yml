@@ -34,24 +34,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: raylib
-          key: raylib-web-5.0-v4-${{ runner.os }}
+          key: raylib-web-5.0-v8-${{ runner.os }}
 
-      - name: Build Raylib Library for Web (with JPEG & Asyncify WaitTime Support)
+      - name: Build Raylib Library for Web (with JPEG & Asyncify Audio Protection)
         if: steps.cache-raylib.outputs.cache-hit != 'true'
         run: |
           git clone --depth 1 --branch 5.0 https://github.com/raysan5/raylib.git raylib
           # Explicitly enable JPEG decoding in raylib config
           sed -i 's/#define SUPPORT_FILEFORMAT_JPG.*/#define SUPPORT_FILEFORMAT_JPG 1/g' raylib/src/config.h
-          # Patch WaitTime in rcore.c to use emscripten_sleep instead of nanosleep on web
-          python3 -c "
-          import re
-          with open('raylib/src/rcore.c', 'r') as f:
-              code = f.read()
-          code = '#if defined(__EMSCRIPTEN__)\n#include <emscripten/emscripten.h>\n#endif\n' + code
-          code = re.sub(r'void WaitTime\(double seconds\)\r?\n\{', 'void WaitTime(double seconds)\n{\n#if defined(__EMSCRIPTEN__)\n    if (seconds > 0.0) emscripten_sleep((unsigned int)(seconds * 1000.0));\n    return;\n#endif', code)
-          with open('raylib/src/rcore.c', 'w') as f:
-              f.write(code)
-          "
+          # Apply thread-safe audio and sleep patches
+          python3 patch_raylib.py
           cd raylib/src
           emmake make PLATFORM=PLATFORM_WEB CUSTOM_CFLAGS="-DSUPPORT_FILEFORMAT_JPG=1" -B
 
@@ -71,9 +63,10 @@ jobs:
             ./raylib/src/libraylib.a \
             -s USE_GLFW=3 \
             -s ASYNCIFY=1 \
-            -s ASYNCIFY_STACK_SIZE=65536 \
+            -s STACK_SIZE=1048576 \
+            -s ASYNCIFY_STACK_SIZE=131072 \
             -s ALLOW_MEMORY_GROWTH=1 \
-            -s INITIAL_MEMORY=134217728 \
+            -s INITIAL_MEMORY=268435456 \
             -s FORCE_FILESYSTEM=1 \
             -s ENVIRONMENT=web \
             --preload-file Graphics \

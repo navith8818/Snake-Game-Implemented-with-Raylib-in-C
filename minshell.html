@@ -186,6 +186,12 @@
           return true;
         }
 
+        // Intercept and swallow non-fatal audio processor callbacks without stalling gameplay
+        if (str.indexOf('ScriptProcessorNode') !== -1 || str.indexOf('onaudioprocess') !== -1) {
+          console.warn('Swallowed transient audio callback event during screen transition:', str);
+          return true;
+        }
+
         statusOverlay.style.display = 'flex';
         statusOverlay.style.opacity = '1';
         spinner.style.display = 'none';
@@ -202,17 +208,62 @@
       window.onunhandledrejection = function(e) {
         var reason = e.reason || '';
         var str = reason.toString();
-        if (str.indexOf('ExitStatus') !== -1 || str.indexOf('unwind') !== -1) {
+        if (str.indexOf('ExitStatus') !== -1 || str.indexOf('unwind') !== -1 || str.indexOf('ScriptProcessorNode') !== -1) {
           return;
         }
         handleGlobalError(str, reason);
       };
 
-      // Click to focus and resume web audio
+      // Wrap AudioContext to shield against WebAssembly Asyncify re-entrancy
+      (function() {
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        var origCreateScriptProcessor = AudioCtx.prototype.createScriptProcessor;
+        if (!origCreateScriptProcessor) return;
+        AudioCtx.prototype.createScriptProcessor = function() {
+          var node = origCreateScriptProcessor.apply(this, arguments);
+          var realHandler = null;
+          Object.defineProperty(node, 'onaudioprocess', {
+            get: function() { return realHandler; },
+            set: function(fn) { realHandler = fn; }
+          });
+          node.addEventListener('audioprocess', function(e) {
+            // If Asyncify is currently unwinding, sleeping, or rewinding, safely play silence instead of crashing Wasm
+            if (typeof Asyncify !== 'undefined' && (Asyncify.currData !== null || Asyncify.state !== 0)) {
+              for (var i = 0; i < e.outputBuffer.numberOfChannels; ++i) {
+                e.outputBuffer.getChannelData(i).fill(0);
+              }
+              return;
+            }
+            try {
+              if (typeof realHandler === 'function') {
+                realHandler(e);
+              }
+            } catch (err) {
+              console.warn('Caught transient audio error:', err);
+              for (var i = 0; i < e.outputBuffer.numberOfChannels; ++i) {
+                e.outputBuffer.getChannelData(i).fill(0);
+              }
+            }
+          });
+          return node;
+        };
+      })();
+
+      // Focus canvas & auto-resume Web Audio on user gesture
       var canvasElem = document.getElementById('canvas');
-      canvasElem.addEventListener('click', function() {
+      function unlockAudio() {
         canvasElem.focus();
-      });
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          // If any AudioContext is suspended, resume it
+          if (window.audioCtx && window.audioCtx.state === 'suspended') {
+            window.audioCtx.resume();
+          }
+        }
+      }
+      canvasElem.addEventListener('click', unlockAudio);
+      window.addEventListener('keydown', unlockAudio);
     </script>
     {{{ SCRIPT }}}
   </body>
